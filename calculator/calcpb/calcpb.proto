@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package calc;
+
+option go_package="calcpb";
+
+message SumRequest {
+    int32 first_number =1;
+    int32 second_number =2;
+}
+
+message SumResponse {
+    int32 result =1;
+}
+
+message PrimeNumberDecompositionRequest{
+    int64 number =1;
+}
+
+message PrimeNumberDecompositionResponse{
+    int64 fractor_number =1;
+}
+
+service CalcService{
+
+    //urany
+    rpc Sum(SumRequest)returns (SumResponse){};
+
+    //server streaming 
+    rpc PrimeNumberDecomposition(PrimeNumberDecompositionRequest) returns (stream PrimeNumberDecompositionResponse) {};
+}
