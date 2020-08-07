@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	//Paths go to GO ROOT
 	"github.com/simplesteph/grpc-go-course/greet/greetpb"
 	"google.golang.org/grpc"
 )
@@ -25,7 +26,76 @@ func main() {
 
 	//	doUnary(c)
 	//doServerStreaming(c)
-	doClientStreaming(c)
+	//doClientStreaming(c)
+	doBiDi(c)
+}
+
+func doBiDi(c greetpb.GreetServiceClient) {
+	fmt.Println("Satarting to do a client bidi streaming RPC...")
+
+	request := []*greetpb.GreetEveryoneRequest{
+
+		&greetpb.GreetEveryoneRequest{
+			Greeting: &greetpb.Greeting{
+				FirstName: "Bartosz",
+			},
+		},
+		&greetpb.GreetEveryoneRequest{
+			Greeting: &greetpb.Greeting{
+				FirstName: "Zarzec",
+			},
+		},
+		&greetpb.GreetEveryoneRequest{
+			Greeting: &greetpb.Greeting{
+				FirstName: "Bartolo",
+			},
+		},
+		&greetpb.GreetEveryoneRequest{
+			Greeting: &greetpb.Greeting{
+				FirstName: "Bart",
+			},
+		},
+	}
+
+	//creating a stream by invoking the client
+
+	stream, err := c.GreetEveryone(context.Background())
+	if err != nil {
+		log.Fatalf("error while calling GreetEveryone stream RPC: %v ", err)
+		return
+	}
+
+	waitc := make(chan struct{})
+	//sending a bunch of messages to the client (go routine)
+	go func() {
+		for _, req := range request {
+			fmt.Printf("Sendign Message: %v\n", req)
+			stream.Send(req)
+			time.Sleep(1000 * time.Millisecond)
+		}
+		stream.CloseSend()
+	}()
+
+	//we receive a bunch of messages from the client
+
+	go func() {
+
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("error while receiving GreetEveryone stream RPC: %v ", err)
+				break
+			}
+			fmt.Printf("Receiving Message: %v\n", res.GetResult())
+		}
+		close(waitc)
+	}()
+
+	//block until everything is done
+	<-waitc
 }
 
 func doClientStreaming(c greetpb.GreetServiceClient) {

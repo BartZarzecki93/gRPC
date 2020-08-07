@@ -21,6 +21,24 @@ message PrimeNumberDecompositionResponse{
     int64 fractor_number =1;
 }
 
+message ComputeAverageRequest{
+    int32 number =1;
+}
+
+message ComputeAverageResponse{
+    double average =1;
+}
+
+message FindMaximumRequest {
+    int32 number = 1;
+}
+
+message FindMaximumResponse {
+    int32 maximum = 1;
+}
+
+
+
 service CalcService{
 
     //urany
@@ -28,4 +46,10 @@ service CalcService{
 
     //server streaming 
     rpc PrimeNumberDecomposition(PrimeNumberDecompositionRequest) returns (stream PrimeNumberDecompositionResponse) {};
+
+    //client streaming 
+    rpc ComputeAverage(stream ComputeAverageRequest) returns (ComputeAverageResponse){};
+
+    //BiDI
+    rpc FindMaximum(stream FindMaximumRequest) returns (stream FindMaximumResponse){};
 }

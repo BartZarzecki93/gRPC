@@ -8,11 +8,38 @@ import (
 	"net"
 	"strconv"
 
+	//Paths go to GO ROOT
 	"github.com/simplesteph/grpc-go-course/greet/greetpb"
 	"google.golang.org/grpc"
 )
 
 type server struct{}
+
+func (*server) GreetEveryone(stream greetpb.GreetService_GreetEveryoneServer) error {
+	fmt.Printf("Greet Everyone function was invoked with with streamign request\n")
+
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			log.Fatalf("error while calling client stream RPC: %v ", err)
+		}
+		firstName := req.GetGreeting().GetFirstName()
+		result := "Hello " + firstName + " !"
+
+		senderr := stream.Send(&greetpb.GreetEveryoneResponse{
+			Result: result,
+		})
+		if senderr != nil {
+			log.Fatalf("error while sendig data to  client stream RPC: %v ", err)
+			return err
+		}
+
+	}
+
+}
 
 func (*server) LongGreet(stream greetpb.GreetService_LongGreetServer) error {
 	fmt.Printf("LongGreet function was invoked with with streamign request\n")

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
+	//Paths go to GO ROOT
 	"github.com/simplesteph/grpc-go-course/calculator/calcpb"
 	"google.golang.org/grpc"
 )
@@ -23,7 +25,123 @@ func main() {
 	c := calcpb.NewCalcServiceClient(cc)
 
 	//doUnary(c)
-	doServerStreaming(c)
+	//doServerStreaming(c)
+	//doClientStreaming(c)
+	doBiDi(c)
+}
+
+func doBiDi(c calcpb.CalcServiceClient) {
+
+	fmt.Println("Satarting to do bidi a client streaming RPC...")
+
+	// instead
+	/*
+		numbers := []int32{1,5,2,7}
+
+		for _, req := range numbers{
+
+			fmt.Printf("Sendign Message: %v\n", req)
+				stream.Send(&calcpb.FindMaximumRequest{
+				Number: req,
+			},)
+				time.Sleep(1000 * time.Millisecond)
+		}
+	*/
+
+	request := []*calcpb.FindMaximumRequest{
+
+		&calcpb.FindMaximumRequest{
+			Number: 1,
+		},
+		&calcpb.FindMaximumRequest{
+			Number: 5,
+		},
+		&calcpb.FindMaximumRequest{
+			Number: 2,
+		},
+		&calcpb.FindMaximumRequest{
+			Number: 4,
+		},
+	}
+
+	stream, err := c.FindMaximum(context.Background())
+	if err != nil {
+		log.Fatalf("error while calling GreetEveryone stream RPC: %v ", err)
+		return
+	}
+
+	waitc := make(chan struct{})
+	//sending a bunch of messages to the client (go routine)
+	go func() {
+		for _, req := range request {
+			fmt.Printf("Sendign Message: %v\n", req)
+			stream.Send(req)
+			time.Sleep(1000 * time.Millisecond)
+		}
+		stream.CloseSend()
+	}()
+
+	//we receive a bunch of messages from the client
+
+	go func() {
+
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("error while receiving GreetEveryone stream RPC: %v ", err)
+				break
+			}
+			fmt.Printf("Receiving Message - new maximum: %v\n", res.GetMaximum())
+		}
+		close(waitc)
+	}()
+
+	//block until everything is done
+	<-waitc
+
+}
+
+func doClientStreaming(c calcpb.CalcServiceClient) {
+
+	fmt.Println("Satarting to do a client streaming RPC...")
+
+	request := []*calcpb.ComputeAverageRequest{
+
+		&calcpb.ComputeAverageRequest{
+			Number: 1,
+		},
+		&calcpb.ComputeAverageRequest{
+			Number: 2,
+		},
+		&calcpb.ComputeAverageRequest{
+			Number: 3,
+		},
+		&calcpb.ComputeAverageRequest{
+			Number: 4,
+		},
+	}
+
+	stream, err := c.ComputeAverage(context.Background())
+	if err != nil {
+		log.Fatalf("error while calling LongGreat RPC: %v ", err)
+	}
+
+	for _, req := range request {
+
+		fmt.Printf("Sending request: %v\n", req)
+		stream.Send(req)
+		time.Sleep(1000 * time.Millisecond)
+	}
+
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("error while receiving longgreet RPC: %v ", err)
+	}
+	log.Printf("Response from LongGreet: %v", res)
+
 }
 
 func doServerStreaming(c calcpb.CalcServiceClient) {
