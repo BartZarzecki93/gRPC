@@ -7,9 +7,12 @@ import (
 	"log"
 	"time"
 
+	"google.golang.org/grpc/codes"
+
 	//Paths go to GO ROOT
 	"github.com/simplesteph/grpc-go-course/calculator/calcpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
 func main() {
@@ -27,7 +30,34 @@ func main() {
 	//doUnary(c)
 	//doServerStreaming(c)
 	//doClientStreaming(c)
-	doBiDi(c)
+	//doBiDi(c)
+	doErrorUnary(c, 10)
+	doErrorUnary(c, -10)
+}
+
+func doErrorUnary(c calcpb.CalcServiceClient, n int32) {
+
+	fmt.Println("Satarting to do a Unary SquarRoot RPC...")
+	req := &calcpb.SquareRootRequest{
+		Number: n,
+	}
+	res, err := c.SquareRoot(context.Background(), req)
+	if err != nil {
+		respErr, ok := status.FromError(err)
+		if ok {
+			//actual error from gRPC    user error
+			fmt.Println(respErr.Message())
+			fmt.Println(respErr.Code())
+			if respErr.Code() == codes.InvalidArgument {
+				fmt.Println("We sent negative number")
+			}
+		} else {
+			log.Fatalf("error while calling SR RPC: %v ", err)
+		}
+
+	}
+	log.Printf("Response from SR: %v", res.GetNumberRoot())
+
 }
 
 func doBiDi(c calcpb.CalcServiceClient) {

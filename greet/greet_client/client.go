@@ -10,6 +10,8 @@ import (
 	//Paths go to GO ROOT
 	"github.com/simplesteph/grpc-go-course/greet/greetpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func main() {
@@ -27,7 +29,40 @@ func main() {
 	//	doUnary(c)
 	//doServerStreaming(c)
 	//doClientStreaming(c)
-	doBiDi(c)
+	//doBiDi(c)
+	doUnaryWithDealine(c, 5*time.Second)
+	doUnaryWithDealine(c, 1*time.Second)
+}
+
+func doUnaryWithDealine(c greetpb.GreetServiceClient, timeout time.Duration) {
+
+	fmt.Println("Satarting to do a Unary with Dealine RPC...")
+	req := &greetpb.GreetWithDeadlineRequest{
+		Greeting: &greetpb.Greeting{
+			FirstName: "Bartosz",
+			FlastName: "Zarzecki",
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	res, err := c.GreetWithDeadline(ctx, req)
+	if err != nil {
+		respErr, ok := status.FromError(err)
+		if ok {
+			//actual error from gRPC    user error
+			fmt.Println(respErr.Message())
+			fmt.Println(respErr.Code())
+			if respErr.Code() == codes.DeadlineExceeded {
+				fmt.Println("We took too long! Dealine was excided")
+			}
+		} else {
+			log.Fatalf("error while calling Func with deadline RPC: %v ", err)
+		}
+		return
+	}
+	log.Printf("Response from Greet with dealine: %v", res.Result)
+
 }
 
 func doBiDi(c greetpb.GreetServiceClient) {
